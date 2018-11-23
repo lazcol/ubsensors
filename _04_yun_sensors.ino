@@ -9,6 +9,8 @@
 #include <Adafruit_BMP280.h>
 #include <Adafruit_Sensor.h>
 
+// vamos a modificar algo para que nos aparezca que se modificó el archivo
+
 #define DHTPIN 2 // pin de conexión del SDA del sensor
 #define DHTTYPE DHT22       // DHT 22  (AM2302)
 
