@@ -1,0 +1,106 @@
+Al principio, con placa WEMOS, se escribía y recibía desde Matlab. Pero enviar comando de vuelta a la placa se tornó complicado.
+
+El talkback especifica, "si tienes un puerto comunicado con un wifi, ese puerto puede comandar" pero esa conexión a wifi es un poco más complicada que una simple conexión a wifi, porque tiene que ser pública, ó simplemente, tiene que ser comandada por otra página web (de servicios).
+
+El paso que siguió fue publicar una ip o utilizar un proxy al que estar colgado, pero siempre el wemos va a tener que estar escuchando, al menos que se pueda programar una interrupción por HTTP, que no se pudo ver.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Para bajar el toolbox de Thingspeak, hay que ingresar a
+
+https://www.mathworks.com/matlabcentral/fileexchange/52244-thingspeak-support-toolbox
+
+y en esa página se elige DOWNLOAD para descargar el toolbox, el cual se debe descomprimir y "tirar" en la ventana de comandos del Matlab (R2014b ó superior) que lo instala automáticamente.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Una vez visto que el Wemos ingresaba los datos en la página de Thingspeak, lo siguiente fue intentar un Talkback.
+Dentro de Thingspeak, en la página se selecciona la solapa de Apps y dentro de esta se elige ThingHTTP.
+Se programa el ThingHTTP para que genere un Post. Luego, para que se arrancara ese ThingHTTP se programa, dentro de Apps también, un React. En el React se selecciona que se ejecute cada vez que se ingresa un valor. Dependiendo de lo que pasara, ejecutaría el ThingHTTP.
+Esto no funcionó por 2 cuestiones:
+1- El ThingHTTP se relegó para el abono de Thingspeak
+2- No se pueden ejecutar más de un React y un ThingHTTP por vez. Es decir que no podía postear más que un comando por vez.
+
+De todas formas lo que nos detenía era que la Wemos no lograba establecer la conexión para ejecutar un comando GET para traer el comando posteado, ni tampoco postear el comnado ya que ThingHTTP no funcionaba.
+
+Se seleccionó otro camino aún no explotado, que es realizar un Matlab Analysis, y en ese análisis ejecutar el comando POST para escribir el Talkback, que hasta ahora se había probado por comandos web y con el programa Postman (www.getpostman.com).
+De esta forma logramos que cada vez que se ingresa un dato, se lanza un React que ejecuta un Matlab Analysis y este es el encargado de, mediante la información en las gráficas, postear un comando POR GRÁFICA. Uno de los futuros retos es convertir esos actuales cuatro comandos, a un solo comando que sea identificable.
+
+Luego de esto se continuaba sin poder recibir. Se intentó con Arduino UNO y módulo ESP8266. Ahora el Bridge funcionaba, se escribía correctamente, pero tenía problemas en la lectura del comando. Tema aparte es que el tiempo entre escrituras a la página no debe ser inferior a 15 SEGUNDOS, luego los comandos del Talkback se pueden retirar sin inconvenientes luego de esperar un tiempo prudente (1 segundo).
+
+La escasa velocidad del servicio de internet durante algún tiempo fue un factor que hizo dudar sobre la funcionalidad del sistema. Es cierto que con escasa velocidad, la escritura se hace imposible ya que Thingspeak no puede esperar "a todo el mundo todo el tiempo que quiera".
+
+Una vez superadas todas estas etapas, de conexión y escritura, se optó por la compra del módulo Dragino YÚN para Arduino UNO. Placa que pudo establecer el Bridge sin problemas y estableció la conexión HTTPS tanto para upstrem como para downstream.
+
+Ya con el Dragino YÚN, se puedo recabar los comandos puestos por el Talkback.
+
+Como alternativa, también se intentó, satisfactoriamente, enviar un Tweet a una cuenta de Twitter y leerlo con el Arduino UNO. Eso sí se puedo y es viable como redundancia tal vez.
+También se implementó con el servicio web "Blynk" para mandar comandos al Arduino y también funcionó. Uno puede ver la situación de las gráficas y a través de ella, puede enviar un comando preprogramado en un botón, al Arduino.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Como se escribía y leía con Matlab
+
+En Matlab se crea un .m con el siguiente 'while':
+% para escribir en la pagina
+while 1
+    for t=linspace(0,2*pi,15)
+        y=abs(150*sin(t))
+        thingSpeakWrite(265953,y,'WriteKey','YIGFXKQZQW8WUZI3')
+        pause(15);
+    end
+end
+
+También se puede hacer genérico
+% para escribir en la pagina
+chID=265953;
+writeApiKey=YIGFXKQZQW8WUZI3;
+while 1
+    for t=linspace(0,2*pi,15)
+        y=abs(150*sin(t))
+        thingSpeakWrite(chID,y,'WriteKey',writeApiKey)
+        pause(15);
+    end
+end
+
+% A su vez, se le puede agregar la parte del GET 
+
+% TalkBack app ID
+TalkBack_ID = '15505';
+% TalkBack command ID
+Command_ID = '/commands/execute?api_key=';
+% TalkBack app API key
+TalkBack_apikey = 'VKT83S61ROIVRRTP';
+url = strcat('https://api.thingspeak.com/talkbacks/',TalkBack_ID,'/commands/',Command_ID,'.json');
+data = webread(url,'api_key',TalkBack_apikey)
+
+Todo sale de la explicación en Mathworks
+https://www.mathworks.com/help/thingspeak/queue-commands-using-the-talkback-app-from-matlab.html
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Para poder hacer funcionar la Dragino YUN hay que realizar unos pasos antes:
+1_ se copia el siguiente Json
+	http://www.dragino.com/downloads/downloads/YunShield/package_dragino_yun_test_index.json
+
+2_ este Json se pega en Archivo -> Preferencias -> Gestor de URL's Adicionales de tarjetas; se acepta.
+3_ Después se abre Herramientas -> Placa -> Gestor de tarjetas -> Buscar la placa Dragino Yun e instalarla.
+4_ a partir de ahora, se puede utilizar la Dragino YUN con el Arduino IDE.
+
+https://www.arduino.cc/en/Reference/YunBridgeLibrary
+
+La secuencia final ACTUAL es la siguiente:
+1_ ingresan los datos de temperatura, humedad, presión y luxes a la YUN.
+2_ La YUN se conecta con Thingspeak a traves de un Bridge.
+3_ Escribe los datos en los gráficos.
+4_ El ingreso de datos lanza un React.
+5_ Cada vez que ingresa un dato, el React (React 1) mira el dato y compara con el valor que le dimos: ¿la temperatura es mayor que -50?
+6_ Si es correcto, ejecuta el Matlab Analysis. Está forzado para que sea correcto y siempre ejecute el Matlab Analysis.
+7_ El Matlab Analysis analiza el conjunto de datos y hace POST publicando un comando en el Talkback por cada dato.
+8_ una vez puesto el comando en el Talkback, se lo lee con un GET desde la Dragino YÚN.
+9_ el comando es borrado del Talkback cuando se lee.
+10_ la Dragino ejecuta según el comando leido.
+
+El Ususario
+ub.sensors@gmail.com
+el password
+Rvecc20172017

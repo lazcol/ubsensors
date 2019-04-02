@@ -1,0 +1,24 @@
+Tema programación con el Arduino UNO
+Hay que bajar la placa en el Arduino IDE
+File -> Preferences -> en Additional Boards Manager URLs
+Colocar:
+http://www.dragino.com/downloads/downloads/YunShield/package_dragino_yun_test_index.json
+Luego ir a 
+Tools -> Boards -> Board Manager
+Una vez que se updatea, hay que elegir
+Dragino YUN by Dragino Technology
+
+Acá te dice qué es lo que tenes que jumpear para poder usarla con Arduino UNO
+http://wiki.dragino.com/index.php?title=Yun_Shield
+
+En este link hay un video, que demuestra que hay que ponerlo a una fuente de poder externa para poder ingresar al Yun via WiFi
+http://wiki.dragino.com/index.php?title=Yun_Shield#Detect_Yun_Shield
+
+Hay que bajar los sketches de internet
+https://github.com/dragino/modules
+y ponerlos en
+C:\Users\xxx\AppData\Local\Arduino15\packages\Dragino\hardware\avr\0.1.0
+
+página de videos
+http://wiki.dragino.com/index.php?title=Video_Instruction
+
